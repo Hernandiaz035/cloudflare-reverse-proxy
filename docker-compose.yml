@@ -1,0 +1,72 @@
+version: "3"
+services:
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    ports:
+      - '8081:81'
+    networks:
+      default:
+      ipvlan:
+        ipv4_address: 192.168.3.19
+    restart: unless-stopped
+    environment:
+      DB_MYSQL_HOST: 'db'
+      DB_MYSQL_PORT: ${DB_MYSQL_PORT:?err}
+      DB_MYSQL_USER: ${DB_MYSQL_USER:?err}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD:?err}
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME:?err}
+      DISABLE_IPV6: 'true'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    depends_on:
+      - db
+
+  db:
+    image: 'jc21/mariadb-aria:latest'
+    networks:
+      default:
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_MYSQL_ROOT_PASSWORD:?err}
+      MYSQL_DATABASE: ${DB_MYSQL_NAME:?err}
+      MYSQL_USER: ${DB_MYSQL_USER:?err}
+      MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD:?err}
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+
+  cloudflare:
+    image: 'cloudflare/cloudflared:latest'
+    networks:
+      default:
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+
+
+networks:
+  ipvlan:
+    external: true
+    # driver: ipvlan
+    # driver_opts:
+    #   parent: eth0
+    #   ipvlan_mode: l3
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 192.168.3.0/24
+    #       gateway: 192.168.3.254
+#   outside:
+#     driver: ipvlan
+#     ipam:
+#       driver: default
+#       config:
+#         - subnet: 192.168.3.0/24
+#           gateway: 192.168.3.254
+      #   - ip_range: 192.168.3.0/24
+      #   - aux_addresses:
+      #       host1: 192.168.3.65
+      #       host2: 192.168.3.66
+      #       host3: 192.168.3.67
+      # driver_opts:
+      #   parent: eth0
+      #   ipvlan_mode: l3
+      
